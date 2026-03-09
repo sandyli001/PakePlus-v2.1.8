@@ -1,11 +1,1062 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus</title>
-    </head>
-    <body>
-        Hello World
-    </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+    <title>圆柱卷绕 · 负极膨胀断片仿真 · 精确缩放版</title>
+    <!-- Google Fonts & Chart.js CDN -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+    <style>
+        /* ---------- 重置 & 基础 ---------- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0b1a24;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            color: #e0f0fa;
+        }
+
+        /* 主容器：三列毛玻璃效果 */
+        .simulator {
+            width: 100%;
+            max-width: 1660px;
+            display: grid;
+            grid-template-columns: 0.95fr 1.25fr 1.35fr;
+            gap: 20px;
+            background: rgba(4, 16, 28, 0.92);
+            backdrop-filter: blur(16px);
+            border-radius: 48px;
+            border: 1px solid #2dc9ff;
+            box-shadow: 0 0 45px rgba(0, 230, 255, 0.3), inset 0 0 20px rgba(0, 210, 255, 0.25);
+            padding: 24px;
+            transition: all 0.2s;
+        }
+
+        /* 通用列样式 */
+        .col {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* ---------- 顶部标题栏 ---------- */
+        .top-bar {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 0 8px;
+        }
+        .main-title {
+            font-size: 2.1rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #c2f5ff, #62ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px #00c3ff, 0 0 40px #0077ff66;
+        }
+        .main-title span {
+            color: #00ffa0;
+            -webkit-text-fill-color: #00ffa0;
+            background: none;
+            text-shadow: 0 0 18px #00ffb3, 0 0 40px #00ffaa;
+        }
+        .version {
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 8px 22px;
+            background: rgba(0, 35, 55, 0.8);
+            border-radius: 40px;
+            border: 1px solid #2fc0e0;
+            color: #daf5ff;
+            box-shadow: 0 0 15px #00e0ff, inset 0 1px 3px #aaffff;
+            backdrop-filter: blur(4px);
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+        }
+
+        /* ---------- 左侧参数区卡片 ---------- */
+        .param-section {
+            background: rgba(8, 28, 40, 0.7);
+            border-radius: 32px;
+            padding: 24px 20px;
+            border: 1px solid #2f9ec0;
+            box-shadow: 0 15px 25px -10px #00000080, inset 0 0 30px #00384d66;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(4px);
+        }
+        .param-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: #c2ecff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-shadow: 0 0 8px #00a6ff;
+            letter-spacing: -0.2px;
+        }
+        .param-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px 20px;
+            flex: 1;
+        }
+        .param-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .param-item label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #b4e2ff;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            opacity: 0.9;
+        }
+        .param-item input[type="number"] {
+            background: #102b38;
+            border: 1px solid #1c9ec0;
+            border-radius: 20px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            color: #f0fcff;
+            font-family: 'Plus Jakarta Sans', monospace;
+            outline: none;
+            transition: 0.2s;
+            box-shadow: inset 0 4px 8px #00000077, 0 2px 6px #00b7ff33;
+            width: 100%;
+            font-weight: 500;
+            -moz-appearance: textfield;
+        }
+        .param-item input[type="number"]::-webkit-inner-spin-button,
+        .param-item input[type="number"]::-webkit-outer-spin-button {
+            opacity: 1;
+            background: #1f6480;
+            height: 26px;
+            border-radius: 8px;
+            border: 1px solid #2fc0e0;
+            box-shadow: 0 0 6px #00b7ff;
+            margin-right: 2px;
+        }
+        .param-item input[type="number"]:focus {
+            border-color: #00f2ff;
+            box-shadow: inset 0 4px 8px #000000, 0 0 0 3px rgba(0, 230, 255, 0.4), 0 0 18px #00b7ff;
+        }
+
+        /* 滑块区域 */
+        .slider-block {
+            grid-column: span 2;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 15px 0 8px;
+            background: rgba(0, 40, 55, 0.6);
+            padding: 18px 16px;
+            border-radius: 40px;
+            border: 1px solid #1eafcf;
+            box-shadow: inset 0 2px 5px #00161e, 0 5px 12px #0000004d;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 700;
+            color: #ecf9ff;
+            font-size: 1.1rem;
+            text-shadow: 0 0 6px #00c3ff;
+        }
+        .slider-label span:last-child {
+            background: #0e3345;
+            padding: 4px 20px;
+            border-radius: 40px;
+            border: 1px solid #2ac0e0;
+            font-size: 1.2rem;
+            box-shadow: inset 0 2px 5px #00000088, 0 0 12px #00ccff;
+        }
+        input[type=range] {
+            width: 100%;
+            height: 10px;
+            background: linear-gradient(90deg, #104b60, #1e8ba8);
+            border-radius: 10px;
+            -webkit-appearance: none;
+            box-shadow: inset 0 2px 6px black;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 26px;
+            height: 26px;
+            background: radial-gradient(circle, #b0f6ff, #00c8ff);
+            border-radius: 50%;
+            box-shadow: 0 0 25px #00f2ff, 0 0 8px 2px white;
+            border: 2px solid white;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            background: radial-gradient(circle, #e0fcff, #2ad4ff);
+        }
+
+        /* 执行按钮 — 超立体 + 科技光效 (增强) */
+        .exec-btn {
+            grid-column: span 2;
+            background: linear-gradient(165deg, #1389b5, #0b5f7a);
+            border: none;
+            border-radius: 60px;
+            padding: 20px 40px;
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 0 3px 8px #00000080, 0 0 20px #00ffff, 0 0 40px #00a6ff;
+            letter-spacing: 1.5px;
+            margin-top: 28px;
+            cursor: pointer;
+            border: 1px solid #5de1ff;
+            box-shadow: 0 14px 0 #063f51, 0 10px 35px #00dcffb3, inset 0 2px 10px #b6f9ff, 0 0 30px #00b7ff;
+            transition: all 0.1s cubic-bezier(0.2, 1.6, 0.5, 1);
+            transform: translateY(-3px);
+            position: relative;
+            animation: btnPulse 2s infinite alternate;
+        }
+        @keyframes btnPulse {
+            0% { box-shadow: 0 14px 0 #063f51, 0 10px 35px #00dcffb3, inset 0 2px 10px #b6f9ff, 0 0 20px #00b7ff; }
+            100% { box-shadow: 0 14px 0 #063f51, 0 15px 45px #3ee6ff, inset 0 2px 15px #ffffff, 0 0 40px #2ad4ff; }
+        }
+        .exec-btn:hover {
+            background: linear-gradient(165deg, #1ca5d0, #107797);
+            box-shadow: 0 12px 0 #053b4a, 0 15px 45px #3ee6ff, inset 0 2px 12px #f0ffff, 0 0 50px #3ee6ff;
+            transform: translateY(-1px);
+            border-color: #9cf0ff;
+            animation: none;
+        }
+        .exec-btn:active {
+            transform: translateY(8px);
+            box-shadow: 0 5px 0 #022b36, 0 20px 45px #00eeffcc, inset 0 2px 8px #aaffff;
+            transition: 0.05s;
+        }
+
+        /* ---------- 中间剖面区 ---------- */
+        .profile-section {
+            background: rgba(8, 28, 40, 0.6);
+            border-radius: 32px;
+            padding: 24px 16px;
+            border: 1px solid #2f9ec0;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 20px 30px -10px black, inset 0 0 30px #00364d;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #c2ecff;
+            text-shadow: 0 0 10px #00b0ff;
+            letter-spacing: -0.2px;
+            justify-content: flex-start;
+        }
+        .profile-header .header-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: rgba(0, 200, 255, 0.2);
+            border-radius: 10px;
+            border: 1px solid #2fc0ff;
+            box-shadow: 0 0 15px #00c3ff, inset 0 0 8px #aaffff;
+            color: #7fe6ff;
+            font-size: 1.8rem;
+            line-height: 1;
+            transform: rotate(5deg);
+        }
+        .profile-header .header-icon::before {
+            content: "◉";
+            filter: drop-shadow(0 0 5px cyan);
+        }
+
+        /* 图例网格 — 文字靠左 */
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px 10px;
+            background: #082633;
+            padding: 14px 12px;
+            border-radius: 30px;
+            margin-bottom: 20px;
+            border: 1px solid #2f9ebf;
+            box-shadow: inset 0 2px 10px #00000066, 0 8px 14px #00000060;
+            font-size: 0.75rem;
+            font-weight: 600;
+            backdrop-filter: blur(2px);
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #d1f0ff;
+            justify-content: flex-start;
+        }
+        .color-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            box-shadow: 0 0 8px currentColor;
+            flex-shrink: 0;
+        }
+
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        canvas {
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1/1;
+            background: #0a1e2a;
+            border-radius: 40px;
+            border: 1px solid #2fc0e8;
+            box-shadow: 0 0 40px #00a6ff66, inset 0 0 20px #003848;
+        }
+
+        .info-cards {
+            display: grid;
+            grid-template-columns: 3fr 3fr 4fr;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .info-card {
+            background: #0c293a;
+            border-radius: 28px;
+            padding: 16px 10px;
+            text-align: center;
+            border: 1px solid #2f9ec0;
+            box-shadow: inset 0 3px 12px #00000077, 0 10px 18px -6px #000000d9;
+            backdrop-filter: blur(2px);
+        }
+        .info-card .label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #b0defa;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .info-card .value {
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: #ecfdff;
+            text-shadow: 0 0 12px #7fe6ff;
+        }
+        .result-card {
+            border: 2px solid #00f0ff;
+            box-shadow: 0 0 28px #00f0ff, inset 0 0 15px #0088aa;
+            background: #124c63;
+        }
+        .result-card .value {
+            font-size: 1.4rem;
+            font-weight: 800;
+        }
+
+        /* ---------- 右侧列 ---------- */
+        .right-col {
+            gap: 20px;
+        }
+
+        .chart-section {
+            background: #082734;
+            border-radius: 32px;
+            padding: 24px 20px 20px;
+            border: 1px solid #1eafcf;
+            box-shadow: 0 20px 25px -10px black, inset 0 0 30px #003f55;
+        }
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #c2ecff;
+            text-shadow: 0 0 10px #00b0ff;
+            letter-spacing: -0.2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chart-title .header-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: rgba(0, 200, 255, 0.15);
+            border-radius: 8px;
+            border: 1px solid #2fc0ff;
+            color: #7fe6ff;
+            font-size: 1.5rem;
+            box-shadow: 0 0 10px #00b7ff;
+        }
+        .chart-title .header-icon::before {
+            content: "📈";
+        }
+        .chart-container {
+            position: relative;
+            height: 240px;
+            width: 100%;
+            margin-top: 12px;
+        }
+        .threshold-values {
+            display: flex;
+            gap: 28px;
+            margin: 12px 0 0 12px;
+            font-weight: 700;
+            color: #c6f0ff;
+            text-shadow: 0 0 8px #0084b3;
+        }
+
+        .table-section {
+            background: #082734;
+            border-radius: 32px;
+            padding: 20px;
+            border: 1px solid #1eafcf;
+            box-shadow: 0 20px 25px -10px black, inset 0 0 30px #003f55;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .table-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #c2ecff;
+            text-shadow: 0 0 10px #00b0ff;
+            letter-spacing: -0.2px;
+        }
+        .risk-table-container {
+            max-height: 280px;
+            overflow-y: auto;
+            border-radius: 24px;
+            background: #0a1f2b;
+            scrollbar-width: thin;
+            scrollbar-color: #1f9ac0 #07313f;
+            border: 1px solid #2f9ec0;
+        }
+        .risk-table-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .risk-table-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(145deg, #30c0ff, #107094);
+            border-radius: 20px;
+            border: 1px solid #aae0ff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            color: #dff5ff;
+        }
+        th {
+            position: sticky;
+            top: 0;
+            background: #0e3d51;
+            background: linear-gradient(145deg, #145e78, #0b3f51);
+            color: #ffffff;
+            font-weight: 700;
+            padding: 16px 8px;
+            border-bottom: 2px solid #26e5ff;
+            backdrop-filter: blur(4px);
+            z-index: 10;
+            text-shadow: 0 2px 5px black;
+            letter-spacing: 0.5px;
+        }
+        td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #1c7b99;
+            text-align: center;
+            font-weight: 500;
+        }
+        tr:hover td {
+            background: #114c61;
+            transition: 0.1s;
+        }
+        .badge-risk {
+            background: #ff3333;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 0.8rem;
+            display: inline-block;
+            box-shadow: 0 0 15px #ff4d4d, inset 0 1px 4px #ffdddd;
+            border: 1px solid #ffbaba;
+        }
+        .badge-safe {
+            color: #9bffb0;
+            font-weight: 700;
+            text-shadow: 0 0 8px #00e660;
+        }
+        .risk-number {
+            color: #ff8888;
+            font-weight: 800;
+            text-shadow: 0 0 8px #ff4d4d;
+        }
+
+        .footnote {
+            grid-column: 1 / -1;
+            margin-top: 20px;
+            padding: 14px 22px;
+            background: #041f2b;
+            border-radius: 50px;
+            border: 1px solid #2f9ec0;
+            font-size: 0.9rem;
+            color: #d1edff;
+            white-space: nowrap;
+            overflow-x: auto;
+            scrollbar-width: none;
+            box-shadow: inset 0 2px 10px #00000099, 0 0 20px #0088aa66;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+        }
+        .footnote span {
+            display: inline-block;
+            margin-right: 20px;
+        }
+        .footnote span::before {
+            content: "•";
+            margin-right: 8px;
+            color: #5fd6ff;
+            font-weight: bold;
+            text-shadow: 0 0 10px cyan;
+        }
+
+        /* 标题装饰 */
+        .param-title::before {
+            content: "⚙️";
+            margin-right: 6px;
+            text-shadow: 0 0 8px cyan;
+        }
+        .table-header::before {
+            content: "🧾";
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+<div class="simulator" id="simulator">
+    <!-- 顶部栏 -->
+    <div class="top-bar">
+        <span class="main-title"><span>🔋</span> 圆柱卷绕 · 负极膨胀断片仿真</span>
+        <span class="version">V0.3.0 · 2026-02-24 · sandy Li</span>
+    </div>
+
+    <!-- 左侧参数列 -->
+    <div class="col">
+        <div class="param-section">
+            <div class="param-title">参数设置</div>
+            <div class="param-grid" id="paramGrid"></div>
+            <div class="slider-block" id="sliderBlock">
+                <div class="slider-label">
+                    <span>负极膨胀比例 %</span>
+                    <span id="swellPercentDisplay">5.0%</span>
+                </div>
+                <input type="range" id="swellSlider" min="0" max="50" value="5" step="0.2">
+            </div>
+            <button class="exec-btn" id="execBtn">⚡ 执行仿真输出 ⚡</button>
+        </div>
+    </div>
+
+    <!-- 中间剖面列 (矢量图标+紫色负极) -->
+    <div class="col">
+        <div class="profile-section">
+            <div class="profile-header">
+                <span class="header-icon"></span>
+                <span>卷芯剖面风险图</span>
+            </div>
+            <!-- 图例 (负极紫色) -->
+            <div class="legend-grid">
+                <div class="legend-item"><span class="color-dot" style="background:#708090;"></span> 卷针</div>
+                <div class="legend-item"><span class="color-dot" style="background:#3f9eb0;"></span> 隔膜</div>
+                <div class="legend-item"><span class="color-dot" style="background:#b284e0;"></span> 负极·安全</div>
+                <div class="legend-item"><span class="color-dot" style="background:#5f8fb0;"></span> 正极·安全</div>
+                <div class="legend-item"><span class="color-dot" style="background:#ff3333;"></span> ⚠️断裂风险</div>
+                <div class="legend-item"><span class="color-dot" style="background:#ffaa00;"></span> 铜箔中线</div>
+                <div class="legend-item"><span class="color-dot" style="background:#4a9eff;"></span> 铝箔中线</div>
+                <div class="legend-item"><span class="color-dot" style="background:#d3d3d340; border:1px solid #aaa;"></span> 间隙层(前)</div>
+            </div>
+            <div class="canvas-container">
+                <canvas id="windingCanvas" width="500" height="500"></canvas>
+            </div>
+            <div class="info-cards">
+                <div class="info-card"><div class="label">🧴 总间隙和</div><div class="value" id="totalGap">0.000</div></div>
+                <div class="info-card"><div class="label">📏 总直径膨胀</div><div class="value" id="totalSwell">0.000</div></div>
+                <div class="info-card result-card" id="resultCard"><div class="label">🔍 仿真结果</div><div class="value" id="resultText">✅ 无断裂</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧列 -->
+    <div class="col right-col">
+        <div class="chart-section">
+            <div class="chart-title">
+                <span class="header-icon"></span> 应变曲线
+            </div>
+            <div class="chart-container">
+                <canvas id="strainChart"></canvas>
+            </div>
+            <div class="threshold-values" id="thresholdDisplay">
+                <span>铜阈: 2.50%</span> <span>铝阈: 4.00%</span>
+            </div>
+        </div>
+        <div class="table-section">
+            <div class="table-header">断裂风险表 · 红标标记</div>
+            <div class="risk-table-container" id="tableContainer">
+                <table id="riskTable">
+                    <thead><tr><th>圈号</th><th>铜箔延伸率%</th><th>铝箔延伸率%</th><th>判定</th></tr></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部备注 -->
+    <div class="footnote" id="footnote">
+        <span>膜片厚度为卷绕后厚度，膨胀比例基于卷绕后活性物质厚度</span>
+        <span>间隙层仅位于正极外侧，膨胀时优先完全挤占</span>
+        <span>首/末圈负极涂层仅单侧涂布（内圈外涂、外圈内涂）</span>
+        <span>不考虑滑移、变形、膨胀不均、圈层束缚；圈层套叠简化（1圈=2层）</span>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // -------------------- DOM 元素 --------------------
+        const canvas = document.getElementById('windingCanvas');
+        const ctx = canvas.getContext('2d');
+        const swellSlider = document.getElementById('swellSlider');
+        const swellPercentDisplay = document.getElementById('swellPercentDisplay');
+        const execBtn = document.getElementById('execBtn');
+        const totalGapSpan = document.getElementById('totalGap');
+        const totalSwellSpan = document.getElementById('totalSwell');
+        const resultTextSpan = document.getElementById('resultText');
+        const thresholdDisplay = document.getElementById('thresholdDisplay');
+        const tableBody = document.getElementById('tableBody');
+
+        // 左侧参数动态生成
+        const paramConfigs = [
+            { label: '卷针直径', id: 'mandrelD', default: 1.6, min: 0, max: 10, step: 0.01, unit: 'mm' },
+            { label: '正极圈数 N', id: 'N', default: 3, min: 1, max: null, step: 1, unit: '' },
+            { label: '负极单面厚度', id: 'negThick', default: 0.055, min: 0.02, max: 0.15, step: 0.001, unit: 'mm' },
+            { label: '正极单面厚度', id: 'posThick', default: 0.045, min: 0.02, max: 0.15, step: 0.001, unit: 'mm' },
+            { label: '铜箔厚度', id: 'cuThick', default: 0.006, min: 0.004, max: 0.02, step: 0.001, unit: 'mm' },
+            { label: '铝箔厚度', id: 'alThick', default: 0.012, min: 0.006, max: 0.025, step: 0.001, unit: 'mm' },
+            { label: '隔膜厚度', id: 'sepThick', default: 0.007, min: 0.005, max: 0.02, step: 0.001, unit: 'mm' },
+            { label: '间隙层厚度', id: 'gapThick', default: 0.001, min: 0, max: 0.05, step: 0.001, unit: 'mm' },
+            { label: 'Cu 断裂阈值%', id: 'cuLimit', default: 2.5, min: 0.5, max: 12, step: 0.1, unit: '' },
+            { label: 'Al 断裂阈值%', id: 'alLimit', default: 4.0, min: 1.0, max: 15, step: 0.1, unit: '' }
+        ];
+
+        const paramGrid = document.getElementById('paramGrid');
+        const inputs = {};
+        paramConfigs.forEach(cfg => {
+            const div = document.createElement('div');
+            div.className = 'param-item';
+            const unitText = cfg.unit ? ` (${cfg.unit})` : '';
+            div.innerHTML = `
+                <label>${cfg.label}${unitText}</label>
+                <input type="number" id="${cfg.id}" value="${cfg.default}" min="${cfg.min}" ${cfg.max !== null ? 'max="'+cfg.max+'"' : ''} step="${cfg.step}">
+            `;
+            paramGrid.appendChild(div);
+            inputs[cfg.id] = div.querySelector('input');
+        });
+
+        const N_input = inputs['N'];
+        const mandrelD_input = inputs['mandrelD'];
+        const negThick_input = inputs['negThick'];
+        const posThick_input = inputs['posThick'];
+        const cuThick_input = inputs['cuThick'];
+        const alThick_input = inputs['alThick'];
+        const sepThick_input = inputs['sepThick'];
+        const gapThick_input = inputs['gapThick'];
+        const cuLimit_input = inputs['cuLimit'];
+        const alLimit_input = inputs['alLimit'];
+
+        let swellRatio = 5.0;
+        let afterSwellMode = false;
+
+        swellSlider.addEventListener('input', (e) => {
+            swellRatio = parseFloat(e.target.value);
+            swellPercentDisplay.innerText = swellRatio.toFixed(1) + '%';
+        });
+
+        let currentData = {
+            N: 3,
+            D_cu_init: [], D_cu_swell: [],
+            D_al_init: [], D_al_swell: [],
+            cuStrain: [], alStrain: [],
+            cuRisk: [], alRisk: [],
+            totalGap: 0, totalSwellDia: 0
+        };
+
+        function toFixed3(num) {
+            return Math.round(num * 1000) / 1000;
+        }
+
+        function computeAll(swell, N, mandrelD, negThick, posThick, cuThick, alThick, sepThick, gapThick) {
+            const deltaInit = 2*cuThick + 4*negThick + 2*alThick + 4*posThick + 4*sepThick + 2*gapThick;
+            const deltaSwell = 2*cuThick + 4*negThick*(1 + swell/100) + 2*alThick + 4*posThick + 4*sepThick;
+
+            let D_cu_init = [0], D_cu_swell = [0];
+            D_cu_init[1] = mandrelD + 2*sepThick + cuThick;
+            D_cu_swell[1] = mandrelD + 2*sepThick + cuThick;
+            for (let k = 2; k <= N+1; k++) {
+                D_cu_init[k] = D_cu_init[k-1] + deltaInit;
+                D_cu_swell[k] = D_cu_swell[k-1] + deltaSwell;
+            }
+
+            let D_al_init = [0], D_al_swell = [0];
+            D_al_init[1] = mandrelD + 2*sepThick + 2*cuThick + 2*negThick + 2*sepThick + 2*posThick + alThick;
+            D_al_swell[1] = mandrelD + 2*sepThick + 2*cuThick + 2*negThick*(1+swell/100) + 2*sepThick + 2*posThick + alThick;
+            for (let i = 2; i <= N; i++) {
+                D_al_init[i] = D_al_init[i-1] + deltaInit;
+                D_al_swell[i] = D_al_swell[i-1] + deltaSwell;
+            }
+
+            let cuStrain = [0], alStrain = [0];
+            for (let k = 1; k <= N+1; k++) {
+                cuStrain[k] = (D_cu_swell[k] - D_cu_init[k]) / D_cu_init[k] * 100;
+            }
+            for (let i = 1; i <= N; i++) {
+                alStrain[i] = (D_al_swell[i] - D_al_init[i]) / D_al_init[i] * 100;
+            }
+
+            const cuLimit = parseFloat(cuLimit_input.value);
+            const alLimit = parseFloat(alLimit_input.value);
+            let cuRisk = [false], alRisk = [false];
+            for (let k = 1; k <= N+1; k++) cuRisk[k] = cuStrain[k] > cuLimit;
+            for (let i = 1; i <= N; i++) alRisk[i] = alStrain[i] > alLimit;
+
+            const totalGap = 2 * gapThick * N;
+            const totalSwellDia = N * 4 * negThick * (swell/100) - totalGap;
+
+            return {
+                N, mandrelD, negThick, posThick, cuThick, alThick, sepThick, gapThick,
+                deltaInit, deltaSwell,
+                D_cu_init, D_cu_swell, D_al_init, D_al_swell,
+                cuStrain, alStrain, cuRisk, alRisk,
+                totalGap, totalSwellDia,
+                cuLimit, alLimit
+            };
+        }
+
+        function updateUI(data) {
+            thresholdDisplay.innerHTML = `<span>铜阈: ${data.cuLimit.toFixed(2)}%</span> <span>铝阈: ${data.alLimit.toFixed(2)}%</span>`;
+
+            totalGapSpan.innerText = data.totalGap.toFixed(3);
+            totalSwellSpan.innerText = toFixed3(data.totalSwellDia).toFixed(3);
+
+            let anyRisk = false;
+            for (let k = 1; k <= data.N+1; k++) if (data.cuRisk[k]) anyRisk = true;
+            for (let i = 1; i <= data.N; i++) if (data.alRisk[i]) anyRisk = true;
+            resultTextSpan.innerText = anyRisk ? '⚠️ 有断裂风险' : '✅ 无断裂风险';
+            resultTextSpan.style.color = anyRisk ? '#ffa0a0' : '#b0ffb0';
+
+            let html = '';
+            const maxRows = Math.max(data.N+1, data.N);
+            for (let r = 1; r <= maxRows; r++) {
+                const cuExist = r <= data.N+1;
+                const alExist = r <= data.N;
+                
+                let cuVal = cuExist ? data.cuStrain[r].toFixed(3) : '—';
+                let alVal = alExist ? data.alStrain[r].toFixed(3) : '—';
+                
+                const cuRiskClass = (cuExist && data.cuRisk[r]) ? 'risk-number' : '';
+                const alRiskClass = (alExist && data.alRisk[r]) ? 'risk-number' : '';
+                
+                const cuTd = cuExist ? `<td class="${cuRiskClass}">${cuVal}</td>` : '<td>—</td>';
+                const alTd = alExist ? `<td class="${alRiskClass}">${alVal}</td>` : '<td>—</td>';
+                
+                const rowRisk = (cuExist && data.cuRisk[r]) || (alExist && data.alRisk[r]);
+                const badge = rowRisk ? '<span class="badge-risk">⚠️断裂</span>' : '<span class="badge-safe">安全</span>';
+                
+                html += `<tr><td>${r}</td>${cuTd}${alTd}<td>${badge}</td></tr>`;
+            }
+            tableBody.innerHTML = html;
+
+            const labels = [];
+            for (let i = 1; i <= Math.max(data.N+1, data.N); i++) labels.push(i.toString());
+            const cuPoints = [], alPoints = [];
+            for (let i = 1; i <= data.N+1; i++) cuPoints.push({x: i, y: data.cuStrain[i]});
+            for (let i = 1; i <= data.N; i++) alPoints.push({x: i, y: data.alStrain[i]});
+            while (alPoints.length < data.N+1) alPoints.push({x: alPoints.length+1, y: null});
+
+            if (window.strainChart instanceof Chart) window.strainChart.destroy();
+            const ctxLine = document.getElementById('strainChart').getContext('2d');
+            window.strainChart = new Chart(ctxLine, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { 
+                            label: '铜箔延伸率', 
+                            data: cuPoints.map(p => p.y), 
+                            borderColor: '#ffaa00', 
+                            backgroundColor: 'transparent', 
+                            tension: 0.2, 
+                            pointRadius: 3,
+                            borderWidth: 2
+                        },
+                        { 
+                            label: '铝箔延伸率', 
+                            data: alPoints.map(p => p.y), 
+                            borderColor: '#4a9eff', 
+                            backgroundColor: 'transparent', 
+                            tension: 0.2, 
+                            pointRadius: 3, 
+                            borderDash: [3,3],
+                            borderWidth: 2
+                        },
+                        { 
+                            label: '铜阈', 
+                            data: Array(labels.length).fill(data.cuLimit), 
+                            borderColor: '#ff6666', 
+                            borderDash: [6,6], 
+                            pointRadius: 0, 
+                            borderWidth: 2 
+                        },
+                        { 
+                            label: '铝阈', 
+                            data: Array(labels.length).fill(data.alLimit), 
+                            borderColor: '#b87cff', 
+                            borderDash: [6,6], 
+                            pointRadius: 0, 
+                            borderWidth: 2 
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#e0f0fa',
+                                font: { weight: '600' }
+                            }
+                        },
+                        tooltip: { 
+                            callbacks: { 
+                                label: (ctx) => ctx.raw.toFixed(3) + '%' 
+                            } 
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#e0f0fa',
+                                font: { weight: '500' }
+                            },
+                            grid: {
+                                color: '#2a5a70'
+                            },
+                            title: {
+                                display: true,
+                                text: '圈号',
+                                color: '#b3e4ff',
+                                font: { weight: '600' }
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#e0f0fa'
+                            },
+                            grid: {
+                                color: '#2a5a70'
+                            },
+                            title: {
+                                display: true, 
+                                text: '延伸率 %',
+                                color: '#b3e4ff',
+                                font: { weight: '600' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 绘制剖面图 (负极统一为高亮紫 #b284e0，精确缩放，无多余边距)
+        function drawProfile(data, modeAfter) {
+            ctx.clearRect(0,0,500,500);
+            const cx=250, cy=250;
+            const rMandrel = data.mandrelD/2;
+
+            // 计算最大半径：从卷针开始，遍历所有层
+            let maxR = rMandrel; // 至少包含卷针半径
+            const N = data.N;
+            for (let i=1; i<=N; i++) {
+                let r_al = (modeAfter ? data.D_al_swell[i] : data.D_al_init[i])/2;
+                // 正极铝箔外半径 + 正极涂层 + 隔膜
+                let r_al_out = r_al + data.alThick/2 + data.posThick + data.sepThick;
+                maxR = Math.max(maxR, r_al_out);
+            }
+            for (let k=1; k<=N+1; k++) {
+                let r_cu = (modeAfter ? data.D_cu_swell[k] : data.D_cu_init[k])/2;
+                // 铜箔外半径 + 负极涂层（最外圈无外侧涂层）
+                let r_cu_out = r_cu + data.cuThick/2 + (k===N+1? 0 : data.negThick);
+                maxR = Math.max(maxR, r_cu_out);
+            }
+            // 不再添加额外常数，保证最大半径精确对应最外层
+            const scale = 210 / maxR; // 将最大半径映射到210像素（留边距40px）
+
+            function fillRing(r1, r2, color, borderColor=null) {
+                if (r2 <= r1) return;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r1*scale, 0, 2*Math.PI);
+                ctx.arc(cx, cy, r2*scale, 0, 2*Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill('evenodd');
+                if (borderColor) {
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r2*scale, 0, 2*Math.PI);
+                    ctx.strokeStyle = borderColor;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+
+            // 卷针
+            fillRing(0, rMandrel, '#708090');
+            // 隔膜 (第一层)
+            fillRing(rMandrel, rMandrel + data.sepThick, '#3f9eb0');
+
+            // 铜箔及负极涂层 (紫色 #b284e0)
+            for (let k=1; k<=N+1; k++) {
+                const r_cu = (modeAfter ? data.D_cu_swell[k] : data.D_cu_init[k])/2;
+                const r_cu_in = r_cu - data.cuThick/2;
+                const r_cu_out = r_cu + data.cuThick/2;
+                const risk = data.cuRisk[k];
+                // 铜金属层
+                ctx.fillStyle = risk && modeAfter ? '#ff3333' : '#ffaa0030';
+                ctx.beginPath();
+                ctx.arc(cx, cy, r_cu_out*scale, 0, 2*Math.PI);
+                ctx.arc(cx, cy, r_cu_in*scale, 0, 2*Math.PI);
+                ctx.fill('evenodd');
+                // 铜中线 (加粗)
+                ctx.beginPath();
+                ctx.arc(cx, cy, r_cu*scale, 0, 2*Math.PI);
+                ctx.strokeStyle = '#ffcc00';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                const negLayer = data.negThick;
+                const safeNegColor = '#b284e0'; // 高亮紫色
+                if (k === 1) {
+                    const r_neg_out = r_cu_out + negLayer;
+                    fillRing(r_cu_out, r_neg_out, (risk && modeAfter) ? '#ff3333' : safeNegColor);
+                } else if (k === N+1) {
+                    const r_neg_in = r_cu_in - negLayer;
+                    fillRing(r_neg_in, r_cu_in, (risk && modeAfter) ? '#ff3333' : safeNegColor);
+                } else {
+                    const r_neg_out = r_cu_out + negLayer;
+                    const r_neg_in = r_cu_in - negLayer;
+                    fillRing(r_cu_out, r_neg_out, (risk && modeAfter) ? '#ff3333' : safeNegColor);
+                    fillRing(r_neg_in, r_cu_in, (risk && modeAfter) ? '#ff3333' : safeNegColor);
+                }
+            }
+
+            // 铝箔及正极涂层
+            for (let i=1; i<=N; i++) {
+                const r_al = (modeAfter ? data.D_al_swell[i] : data.D_al_init[i])/2;
+                const r_al_in = r_al - data.alThick/2;
+                const r_al_out = r_al + data.alThick/2;
+                const risk = data.alRisk[i];
+                ctx.fillStyle = risk && modeAfter ? '#ff3333' : '#4a9eff30';
+                ctx.beginPath();
+                ctx.arc(cx, cy, r_al_out*scale, 0, 2*Math.PI);
+                ctx.arc(cx, cy, r_al_in*scale, 0, 2*Math.PI);
+                ctx.fill('evenodd');
+                ctx.beginPath();
+                ctx.arc(cx, cy, r_al*scale, 0, 2*Math.PI);
+                ctx.strokeStyle = '#66ccff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                const posLayer = data.posThick;
+                const r_pos_out = r_al_out + posLayer;
+                const r_pos_in = r_al_in - posLayer;
+                fillRing(r_al_out, r_pos_out, (risk && modeAfter) ? '#ff3333' : '#5f8fb0');
+                fillRing(r_pos_in, r_al_in, (risk && modeAfter) ? '#ff3333' : '#5f8fb0');
+            }
+
+            // 膨胀前间隙层
+            if (!modeAfter) {
+                for (let i=1; i<=N; i++) {
+                    const r_al = data.D_al_init[i]/2;
+                    const r_al_out = r_al + data.alThick/2 + data.posThick;
+                    const r_gap = r_al_out + data.gapThick;
+                    ctx.fillStyle = '#d3d3d340';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r_gap*scale, 0, 2*Math.PI);
+                    ctx.arc(cx, cy, r_al_out*scale, 0, 2*Math.PI);
+                    ctx.fill('evenodd');
+                    ctx.strokeStyle = '#a0a0a0';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r_gap*scale, 0, 2*Math.PI);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function runSimulation(swellModeAfter) {
+            const N = parseInt(N_input.value);
+            const mandrelD = parseFloat(mandrelD_input.value);
+            const negThick = parseFloat(negThick_input.value);
+            const posThick = parseFloat(posThick_input.value);
+            const cuThick = parseFloat(cuThick_input.value);
+            const alThick = parseFloat(alThick_input.value);
+            const sepThick = parseFloat(sepThick_input.value);
+            const gapThick = parseFloat(gapThick_input.value);
+            const swell = swellRatio;
+
+            const data = computeAll(swell, N, mandrelD, negThick, posThick, cuThick, alThick, sepThick, gapThick);
+            Object.assign(currentData, data);
+
+            updateUI(data);
+            drawProfile(data, swellModeAfter);
+        }
+
+        execBtn.addEventListener('click', () => {
+            afterSwellMode = true;
+            runSimulation(true);
+        });
+
+        window.addEventListener('load', () => {
+            swellRatio = 5.0;
+            swellSlider.value = '5';
+            swellPercentDisplay.innerText = '5.0%';
+            afterSwellMode = false;
+            runSimulation(false);
+        });
+    })();
+</script>
+</body>
 </html>
